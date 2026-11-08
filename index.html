@@ -490,7 +490,7 @@ async function connect(){
   if(!navigator.bluetooth){setStatus('This browser has no Bluetooth access. Use Chrome on a computer or Android, or Bluefy on iPhone, with this page opened directly (not inside Claude).','');return}
   try{
     setStatus('Choose your Polar H10 in the Bluetooth dialog …');
-    const dev=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'Polar H10'}],optionalServices:[PMD]});
+    const dev=await navigator.bluetooth.requestDevice({filters:[{namePrefix:'Polar'},{services:['heart_rate']}],optionalServices:[PMD,'heart_rate','battery_service']});
     L.dev=dev;dev.addEventListener('gattserverdisconnected',()=>{if(S.live){S.live=false;clearInterval(L.timer);$('#livebar').hidden=false;$('#disconnect').hidden=true;setStatus('Sensor disconnected · '+fmt(L.buf.length/130)+' recorded. Save it or reconnect.','')}});
     setStatus('Connecting to '+dev.name+' …');
     const srv=await dev.gatt.connect(),svc=await srv.getPrimaryService(PMD);
