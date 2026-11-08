@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10151b">
+  <title>H10 ECG Analyzer</title>
+  <style>
+    :root { color-scheme: dark; --bg:#10151b; --panel:#19212a; --line:#2b3743; --muted:#9eacb9; --text:#edf3f7; --accent:#56d6b1; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(1100px,100% - 32px); margin:36px auto; }
+    header { margin-bottom:24px; }
+    h1 { margin:0; font-size:clamp(1.7rem,4vw,2.4rem); letter-spacing:-.03em; }
+    header p,.hint,.sub { color:var(--muted); }
+    header p { margin:6px 0 0; }
+    .toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:16px; background:var(--panel); border:1px solid var(--line); border-radius:14px; }
+    button,.file-button { display:inline-flex; align-items:center; justify-content:center; min-height:42px; padding:9px 14px; border:1px solid var(--line); border-radius:9px; background:#222d38; color:var(--text); font:inherit; cursor:pointer; }
+    button:hover,.file-button:hover { border-color:var(--accent); }
+    button.primary { background:var(--accent); color:#09231c; border-color:var(--accent); font-weight:700; }
+    input[type=file] { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+    .rate { display:flex; align-items:center; gap:8px; margin-left:auto; color:var(--muted); }
+    .rate input { width:76px; padding:9px; border:1px solid var(--line); border-radius:8px; background:#10151b; color:var(--text); font:inherit; }
+    .status { flex-basis:100%; margin:0; color:var(--muted); font-size:.9rem; }
+    .grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:18px 0; }
+    .card,.section { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; }
+    .label { color:var(--muted); font-size:.78rem; font-weight:700; letter-spacing:.08em; }
+    .value { margin-top:8px; font-size:1.75rem; font-weight:650; }
+    .unit { color:var(--muted); font-size:.9rem; font-weight:400; }
+    .section { margin-top:14px; }
+    h2 { margin:0 0 14px; font-size:1.05rem; }
+    .strip { height:150px; display:grid; place-items:center; border:1px solid #293844; border-radius:8px; color:var(--muted); background-color:#131b22; background-image:linear-gradient(#293844 1px,transparent 1px),linear-gradient(90deg,#293844 1px,transparent 1px); background-size:20px 20px; }
+    .legend { display:flex; flex-wrap:wrap; gap:16px; margin-top:12px; color:var(--muted); font-size:.88rem; }
+    .dot { display:inline-block; width:9px; height:9px; margin-right:6px; border-radius:50%; background:var(--accent); }
+    .dot.orange { background:#ffb454; } .dot.red { background:#ff6978; } .dot.blue { background:#73aaff; }
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .empty { color:var(--muted); margin:0; }
+    .notice { margin-top:18px; padding:14px 16px; border-left:3px solid var(--accent); background:#17251f; border-radius:5px; color:#c8d8d1; font-size:.9rem; }
+    @media(max-width:700px) { main { width:min(100% - 20px,1100px); margin:22px auto; } .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .two-col { grid-template-columns:1fr; } .rate { margin-left:0; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>H10 ECG Analyzer</h1>
+      <p>Polar H10 single-lead ECG · R-peak detection, HRV, DFA-α1 and ectopic-beat flags</p>
+    </header>
+
+    <section class="toolbar" aria-label="Recording controls">
+      <label class="file-button" for="ecg-file">Open ECG file</label>
+      <input id="ecg-file" type="file" accept=".csv,.txt,.dat,text/csv,text/plain">
+      <button type="button">Connect H10 live</button>
+      <button type="button">Load sample</button>
+      <label class="rate">Sample rate <input type="number" value="130" min="1" aria-label="Sample rate in hertz"> Hz</label>
+      <p class="status" id="status">Showing a synthetic sample recording.</p>
+      <button type="button">Save recording (CSV)</button>
+      <button type="button">Disconnect</button>
+    </section>
+
+    <section class="grid" aria-label="Recording metrics">
+      <article class="card"><div class="label">HEART RATE</div><div class="value">— <span class="unit">bpm</span></div><div class="sub">whole recording</div></article>
+      <article class="card"><div class="label">RMSSD</div><div class="value">— <span class="unit">ms</span></div><div class="sub">pNN50 —</div></article>
+      <article class="card"><div class="label">SDNN</div><div class="value">— <span class="unit">ms</span></div><div class="sub">— NN intervals</div></article>
+      <article class="card"><div class="label">DFA α1</div><div class="value">—</div><div class="sub">needs ≥ 50 beats</div></article>
+    </section>
+
+    <section class="section">
+      <h2>Flagged beats <span class="unit">—</span></h2>
+      <div class="strip" role="img" aria-label="ECG strip placeholder">ECG strip —</div>
+      <div class="legend">
+        <span><i class="dot"></i>Normal beat</span>
+        <span><i class="dot orange"></i>Premature (ectopic)</span>
+        <span><i class="dot blue"></i>Short / noise</span>
+        <span><i class="dot red"></i>Long / missed</span>
+        <span>Grid 0.2 s × 0.5 mV</span>
+      </div>
+    </section>
+
+    <section class="two-col">
+      <article class="section"><h2>R-R tachogram</h2><p class="empty">Tap to jump the strip</p></article>
+      <article class="section"><h2>HRV over time</h2><p class="empty">2-min windows, 30 s step</p></article>
+    </section>
+    <section class="section"><h2>DFA α1</h2><p class="empty">0.75 ≈ aerobic threshold, 0.5 ≈ anaerobic</p></section>
+    <section class="section"><h2>RMSSD (ms)</h2><p class="empty">No analysis data yet.</p></section>
+    <section class="section"><h2>Beat log</h2><p class="empty">—</p></section>
+
+    <aside class="notice">
+      Files: export a recording from ECG Recorder (or Polar Sensor Logger) and open it here; the parser should find the ECG column and sample rate, defaulting to 130 Hz. Live mode needs Web Bluetooth: Chrome on a computer or Android, or the Bluefy browser on iPhone, with this page opened as a standalone file or HTTPS link. Beat flags are rhythm heuristics from R-R timing, not a medical diagnosis.
+      <br><br><strong>Note:</strong> This file provides the interface only; ECG loading, live connection, signal analysis, and CSV export are not implemented yet.
+    </aside>
+  </main>
+  <script>
+    const picker = document.getElementById('ecg-file');
+    const status = document.getElementById('status');
+    picker.addEventListener('change', () => {
+      status.textContent = picker.files.length ? `Selected: ${picker.files[0].name} (analysis is not implemented yet).` : 'Showing a synthetic sample recording.';
+    });
+  </script>
+</body>
+</html>
